@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 
 ROOT = Path(__file__).resolve().parent.parent
+TEMPLATE_DIR = ROOT / "templates"
 DATA_DIR = ROOT / "data"
 DB_PATH = DATA_DIR / "jobsearch.db"
 RESUME_OUTPUT_DIR = DATA_DIR / "output" / "resumes"

@@ -173,6 +173,67 @@ def tailor_cmd(job_id: str):
     click.echo(f"Wrote tailored resume -> {pdf_path}")
 
 
+@main.command("digest")
+def digest_cmd():
+    """Build the digest from the current shortlist, tailor a resume for each
+    job that doesn't have one yet, render HTML, and deliver it.
+
+    Delivery always writes a local HTML file; email/Slack fire additionally
+    if their env vars are configured (see .env.example). Digested jobs are
+    marked so they don't resurface tomorrow.
+    """
+    from datetime import date
+
+    from jobsearch.digest.build import build_digest_entries, render_digest_html
+    from jobsearch.digest.deliver import send_email, send_slack, write_html_file
+    from jobsearch.resume.render import render_pdf
+    from jobsearch.resume.tailor import tailor_resume
+    from jobsearch.config import DIGEST_OUTPUT_DIR
+
+    criteria = load_criteria()
+    resume = _load_base_resume()
+    run_date = date.today().isoformat()
+
+    with db.get_conn() as conn:
+        entries = build_digest_entries(conn, criteria.min_fit_score, criteria.digest_size)
+
+        for entry in entries:
+            if entry.resume_pdf_path:
+                continue
+            row = conn.execute("SELECT * FROM jobs WHERE job_id = ?", (entry.job_id,)).fetchone()
+            job = _row_to_raw_job(row)
+            tailored = tailor_resume(resume, job)
+            pdf_path = RESUME_OUTPUT_DIR / f"{entry.job_id}_{job.company}.pdf".replace(" ", "_")
+            render_pdf(tailored, pdf_path)
+            db.save_resume(conn, entry.job_id, str(pdf_path), tailored.model_dump())
+            entry.resume_pdf_path = str(pdf_path)
+            click.echo(f"  tailored resume -> {pdf_path}")
+
+        html = render_digest_html(entries, run_date=run_date)
+        out_path = write_html_file(html, DIGEST_OUTPUT_DIR / f"{run_date}.html")
+
+        emailed = send_email(html, subject=f"Job Digest — {run_date} ({len(entries)} matches)")
+        slacked = send_slack(entries, run_date)
+
+        db.record_digest_run(conn, run_date, [e.job_id for e in entries])
+        for entry in entries:
+            db.set_status(conn, entry.job_id, "digested")
+
+    click.echo(f"Digest written to {out_path} ({len(entries)} jobs).")
+    click.echo(f"Email: {'sent' if emailed else 'skipped (not configured)'}")
+    click.echo(f"Slack: {'sent' if slacked else 'skipped (not configured)'}")
+
+
+@main.command("run-all")
+@click.pass_context
+def run_all(ctx):
+    """Full daily pipeline: fetch all sources, score, tailor, and deliver the digest."""
+    ctx.invoke(fetch_greenhouse, board_tokens=())
+    ctx.invoke(fetch_lever, site_ids=())
+    ctx.invoke(score_cmd, limit=None)
+    ctx.invoke(digest_cmd)
+
+
 @main.command("stats")
 def stats():
     """Print row counts for a quick sanity check."""

@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Job Digest — {{ run_date }}</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Arial, sans-serif; background: #f5f5f7; margin: 0; padding: 24px; color: #1a1a1a; }
+  .container { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 22px; margin-bottom: 2px; }
+  .subtitle { color: #666; margin-bottom: 24px; font-size: 14px; }
+  .card {
+    background: white; border-radius: 10px; padding: 18px 20px; margin-bottom: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .card-header { display: flex; justify-content: space-between; align-items: baseline; }
+  .title { font-size: 16px; font-weight: 600; }
+  .score {
+    font-size: 13px; font-weight: 700; padding: 2px 10px; border-radius: 999px;
+    background: #e8f5e9; color: #2e7d32; white-space: nowrap;
+  }
+  .score.mid { background: #fff8e1; color: #f57f17; }
+  .meta { color: #666; font-size: 13px; margin: 4px 0 10px 0; }
+  .meta .source-tag {
+    display: inline-block; background: #eef0f3; color: #444; border-radius: 4px;
+    padding: 1px 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em;
+    margin-right: 6px;
+  }
+  .reasoning { font-size: 14px; margin-bottom: 8px; }
+  .reasoning-label { font-weight: 600; color: #444; }
+  .links a {
+    display: inline-block; margin-right: 12px; font-size: 13px; color: #0b5fff; text-decoration: none;
+  }
+  .links a:hover { text-decoration: underline; }
+  .empty { color: #666; text-align: center; padding: 40px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Job Digest</h1>
+  <div class="subtitle">{{ run_date }} &middot; {{ jobs | length }} matches</div>
+
+  {% if not jobs %}
+  <div class="card empty">No matches met the fit-score threshold today.</div>
+  {% endif %}
+
+  {% for job in jobs %}
+  <div class="card">
+    <div class="card-header">
+      <div class="title">{{ job.title }} &middot; {{ job.company }}</div>
+      <div class="score {% if job.llm_fit_score < 80 %}mid{% endif %}">{{ job.llm_fit_score }}/100</div>
+    </div>
+    <div class="meta">
+      <span class="source-tag">{{ job.source }}</span>{{ job.location }}
+    </div>
+    <div class="reasoning"><span class="reasoning-label">Why:</span> {{ job.llm_reasoning }}</div>
+    {% if job.llm_seniority_assessment %}
+    <div class="reasoning"><span class="reasoning-label">Seniority:</span> {{ job.llm_seniority_assessment }}</div>
+    {% endif %}
+    <div class="links">
+      <a href="{{ job.url }}">Job posting →</a>
+      {% if job.resume_pdf_path %}<a href="file://{{ job.resume_pdf_path }}">Tailored resume →</a>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+</body>
+</html>

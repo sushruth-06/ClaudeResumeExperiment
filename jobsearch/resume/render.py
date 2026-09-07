@@ -12,10 +12,8 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 from playwright.sync_api import sync_playwright
 
-from jobsearch.config import ROOT
+from jobsearch.config import TEMPLATE_DIR
 from jobsearch.resume.schema import Resume
-
-TEMPLATE_DIR = ROOT / "templates"
 
 # Pin to a pre-installed Chromium build when present (this repo's sandbox
 # ships one that predates whatever revision the pip `playwright` package
