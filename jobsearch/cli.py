@@ -52,6 +52,28 @@ def fetch_lever(site_ids: tuple[str, ...]):
     _store_jobs(jobs)
 
 
+@main.command("fetch-aggregator")
+@click.argument("queries", nargs=-1)
+@click.option("--location", default="", help="Location filter, e.g. 'Remote' or 'New York'.")
+def fetch_aggregator(queries: tuple[str, ...], location: str):
+    """Fetch jobs from the configured aggregator API (JSearch or Adzuna).
+
+    If no queries are given, uses data/criteria.yaml's target_titles.
+    Requires JSEARCH_API_KEY or ADZUNA_APP_ID+ADZUNA_APP_KEY in .env.
+    """
+    from jobsearch.sources import aggregator
+
+    qs = list(queries) or load_criteria().target_titles
+    if not qs:
+        click.echo("No queries configured (set data/criteria.yaml target_titles, or pass some).")
+        return
+    try:
+        jobs = aggregator.fetch_all(qs, location=location)
+    except aggregator.NotConfigured as e:
+        raise click.ClickException(str(e))
+    _store_jobs(jobs)
+
+
 def _store_jobs(jobs) -> None:
     new_count = 0
     with db.get_conn() as conn:
@@ -230,6 +252,10 @@ def run_all(ctx):
     """Full daily pipeline: fetch all sources, score, tailor, and deliver the digest."""
     ctx.invoke(fetch_greenhouse, board_tokens=())
     ctx.invoke(fetch_lever, site_ids=())
+    try:
+        ctx.invoke(fetch_aggregator, queries=(), location="")
+    except click.ClickException as e:
+        click.echo(f"Skipping aggregator source: {e.message}")
     ctx.invoke(score_cmd, limit=None)
     ctx.invoke(digest_cmd)
 
