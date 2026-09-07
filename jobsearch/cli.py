@@ -246,6 +246,32 @@ def digest_cmd():
     click.echo(f"Slack: {'sent' if slacked else 'skipped (not configured)'}")
 
 
+@main.command("fetch-linkedin")
+def fetch_linkedin():
+    """Scrape LinkedIn job search results (feature-flagged; see criteria.yaml linkedin.enabled).
+
+    Requires a one-time manual login into the persistent browser profile at
+    data/.linkedin-profile — see jobsearch/sources/linkedin.py docstring.
+    Off by default given LinkedIn ToS / account-restriction risk.
+    """
+    from jobsearch.sources import linkedin
+
+    criteria = load_criteria()
+    if not criteria.linkedin.enabled:
+        click.echo("LinkedIn source is disabled (criteria.yaml linkedin.enabled: false). Skipping.")
+        return
+    if not criteria.linkedin.search_url:
+        raise click.ClickException("criteria.yaml linkedin.search_url is empty.")
+
+    jobs = linkedin.fetch_jobs(
+        criteria.linkedin.search_url,
+        max_results=criteria.linkedin.max_results_per_run,
+        min_delay=criteria.linkedin.min_delay_seconds,
+        max_delay=criteria.linkedin.max_delay_seconds,
+    )
+    _store_jobs(jobs)
+
+
 @main.command("run-all")
 @click.pass_context
 def run_all(ctx):
@@ -256,6 +282,7 @@ def run_all(ctx):
         ctx.invoke(fetch_aggregator, queries=(), location="")
     except click.ClickException as e:
         click.echo(f"Skipping aggregator source: {e.message}")
+    ctx.invoke(fetch_linkedin)
     ctx.invoke(score_cmd, limit=None)
     ctx.invoke(digest_cmd)
 
