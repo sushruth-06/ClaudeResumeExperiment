@@ -1,0 +1,23 @@
+# Target company list for the Greenhouse / Lever direct-API source.
+# board_token / site_id is the slug used in the company's public job board URL, e.g.
+#   Greenhouse: https://boards.greenhouse.io/{board_token}          -> board_token
+#   Lever:      https://jobs.lever.co/{site_id}                     -> site_id
+#
+# Not every company uses Greenhouse or Lever — if a company you care about doesn't
+# appear here, it's probably on Workday/Ashby/custom and out of scope for this source
+# (the aggregator API source is meant to catch those).
+#
+# A handful of real, currently-public boards are seeded below so the fetcher can be
+# tested against live data immediately. Replace/extend with your own watchlist.
+
+greenhouse:
+  - stripe
+  - airbnb
+  - coinbase
+  - robinhood
+  - doordash
+
+lever:
+  - netflix
+  - shopify
+  - box

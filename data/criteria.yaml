@@ -1,0 +1,41 @@
+# Your job-search criteria. Fill these in — the pipeline runs with sane
+# defaults (very permissive) until you do, so it's safe to leave blank for now.
+
+# Regexes are matched case-insensitively against the job title.
+target_titles:
+  - "software engineer"
+  - "backend engineer"
+  - "full[- ]?stack engineer"
+
+# One of: intern, entry, mid, senior, staff, principal, any
+seniority: any
+
+# Locations you'd accept. Special value "remote" matches remote postings.
+# Leave empty to accept anywhere.
+locations:
+  - remote
+
+# Hard dealbreakers — a posting matching any of these is dropped before
+# it ever reaches the LLM (keeps API costs down and keeps junk out of the digest).
+dealbreakers:
+  titles_exclude:
+    - "staff.*(iii|iv)"
+  keywords_exclude: []
+  min_comp_usd: null   # e.g. 150000 — set null to disable the comp floor
+
+# Specific companies you especially care about (used to boost score / for
+# the Greenhouse+Lever source list below). Optional.
+watchlist_companies: []
+
+# How many jobs to include in the final morning digest.
+digest_size: 18
+
+# Minimum LLM fit score (0-100) to make the shortlist.
+min_fit_score: 65
+
+linkedin:
+  enabled: false   # flip to true once you've reviewed the ToS risk and logged in once
+  search_url: ""   # paste a LinkedIn job-search results URL with your filters applied
+  max_results_per_run: 25
+  min_delay_seconds: 4
+  max_delay_seconds: 11

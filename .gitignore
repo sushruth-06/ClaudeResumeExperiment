@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+.env
+data/jobsearch.db
+data/output/resumes/*.pdf
+data/output/digests/*.html
+.playwright-linkedin-state.json
+.DS_Store
+*.log
