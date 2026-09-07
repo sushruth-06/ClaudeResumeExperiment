@@ -1,0 +1,110 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>{{ resume.contact.name }} - Resume</title>
+<style>
+  @page { size: Letter; margin: 0.6in; }
+  body {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    color: #1a1a1a;
+    font-size: 10.5pt;
+    line-height: 1.4;
+  }
+  h1 { font-size: 18pt; margin: 0 0 2px 0; }
+  .contact-line { font-size: 9.5pt; color: #444; margin-bottom: 14px; }
+  .contact-line span:not(:last-child)::after { content: " \00b7 "; color: #999; }
+  h2 {
+    font-size: 11pt;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 2px;
+    margin: 16px 0 8px 0;
+  }
+  .summary { margin-bottom: 4px; }
+  .skills { margin-bottom: 4px; }
+  .entry { margin-bottom: 10px; }
+  .entry-header { display: flex; justify-content: space-between; font-weight: bold; }
+  .entry-subheader { display: flex; justify-content: space-between; font-style: italic; color: #333; font-size: 10pt; }
+  ul { margin: 4px 0 0 0; padding-left: 18px; }
+  li { margin-bottom: 2px; }
+</style>
+</head>
+<body>
+  <h1>{{ resume.contact.name }}</h1>
+  <div class="contact-line">
+    {% if resume.contact.email %}<span>{{ resume.contact.email }}</span>{% endif %}
+    {% if resume.contact.phone %}<span>{{ resume.contact.phone }}</span>{% endif %}
+    {% if resume.contact.location %}<span>{{ resume.contact.location }}</span>{% endif %}
+    {% if resume.contact.linkedin %}<span>{{ resume.contact.linkedin }}</span>{% endif %}
+    {% if resume.contact.github %}<span>{{ resume.contact.github }}</span>{% endif %}
+    {% if resume.contact.website %}<span>{{ resume.contact.website }}</span>{% endif %}
+  </div>
+
+  {% if resume.summary %}
+  <h2>Summary</h2>
+  <div class="summary">{{ resume.summary }}</div>
+  {% endif %}
+
+  {% if resume.skills %}
+  <h2>Skills</h2>
+  <div class="skills">{{ resume.skills | join(" &middot; ") | safe }}</div>
+  {% endif %}
+
+  {% if resume.experience %}
+  <h2>Experience</h2>
+  {% for entry in resume.experience %}
+  <div class="entry">
+    <div class="entry-header">
+      <span>{{ entry.company }}</span>
+      <span>{{ entry.location }}</span>
+    </div>
+    <div class="entry-subheader">
+      <span>{{ entry.title }}</span>
+      <span>{{ entry.start_date }}{% if entry.start_date or entry.end_date %} &ndash; {% endif %}{{ entry.end_date }}</span>
+    </div>
+    {% if entry.bullets %}
+    <ul>
+      {% for bullet in entry.bullets %}<li>{{ bullet }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if resume.projects %}
+  <h2>Projects</h2>
+  {% for entry in resume.projects %}
+  <div class="entry">
+    <div class="entry-header"><span>{{ entry.name }}</span><span>{{ entry.url }}</span></div>
+    {% if entry.description %}<div>{{ entry.description }}</div>{% endif %}
+    {% if entry.bullets %}
+    <ul>{% for bullet in entry.bullets %}<li>{{ bullet }}</li>{% endfor %}</ul>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if resume.education %}
+  <h2>Education</h2>
+  {% for entry in resume.education %}
+  <div class="entry">
+    <div class="entry-header">
+      <span>{{ entry.school }}</span>
+      <span>{{ entry.start_date }}{% if entry.start_date or entry.end_date %} &ndash; {% endif %}{{ entry.end_date }}</span>
+    </div>
+    <div class="entry-subheader"><span>{{ entry.degree }}{% if entry.field %}, {{ entry.field }}{% endif %}</span></div>
+    {% if entry.details %}
+    <ul>{% for d in entry.details %}<li>{{ d }}</li>{% endfor %}</ul>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if resume.certifications %}
+  <h2>Certifications</h2>
+  <div>{{ resume.certifications | join(" &middot; ") | safe }}</div>
+  {% endif %}
+</body>
+</html>

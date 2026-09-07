@@ -14,6 +14,7 @@ DATA_DIR = ROOT / "data"
 DB_PATH = DATA_DIR / "jobsearch.db"
 RESUME_OUTPUT_DIR = DATA_DIR / "output" / "resumes"
 DIGEST_OUTPUT_DIR = DATA_DIR / "output" / "digests"
+BASE_RESUME_JSON_PATH = DATA_DIR / "resume" / "base_resume.json"
 
 load_dotenv(ROOT / ".env")
 
