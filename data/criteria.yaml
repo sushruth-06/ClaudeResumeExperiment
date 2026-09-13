@@ -3,23 +3,23 @@
 
 # Regexes are matched case-insensitively against the job title.
 target_titles:
-  - "software engineer"
-  - "backend engineer"
-  - "full[- ]?stack engineer"
+  - "data analyst"
+  - "data engineer"
+  - "data scientist"
+  - "business analyst"
+  - "analyst"
 
 # One of: intern, entry, mid, senior, staff, principal, any
 seniority: any
 
 # Locations you'd accept. Special value "remote" matches remote postings.
 # Leave empty to accept anywhere.
-locations:
-  - remote
+locations: []   # open to any location, no preference
 
 # Hard dealbreakers — a posting matching any of these is dropped before
 # it ever reaches the LLM (keeps API costs down and keeps junk out of the digest).
 dealbreakers:
-  titles_exclude:
-    - "staff.*(iii|iv)"
+  titles_exclude: []
   keywords_exclude: []
   min_comp_usd: null   # e.g. 150000 — set null to disable the comp floor
 
