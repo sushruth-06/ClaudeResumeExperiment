@@ -23,15 +23,16 @@ MODEL = "claude-sonnet-5"
 SCORE_TOOL = {
     "name": "record_fit_assessment",
     "description": "Record a structured assessment of how well this job posting fits the candidate.",
+    "strict": True,
     "input_schema": {
         "type": "object",
+        "additionalProperties": False,
         "properties": {
             "fit_score": {
                 "type": "integer",
-                "minimum": 0,
-                "maximum": 100,
-                "description": "Overall fit score: how strong a match this role is for the candidate, "
-                "weighing seniority alignment, skill/experience overlap, and role authenticity.",
+                "description": "Overall fit score from 0 to 100: how strong a match this role is for "
+                "the candidate, weighing seniority alignment, skill/experience overlap, and role "
+                "authenticity.",
             },
             "seniority_assessment": {
                 "type": "string",
@@ -102,8 +103,11 @@ def score_job(job: RawJob, resume_json: dict, client: anthropic.Anthropic | None
     for block in resp.content:
         if block.type == "tool_use" and block.name == "record_fit_assessment":
             data = block.input
+            # strict tool schemas can't express a numeric range (min/max on an
+            # integer property isn't a supported constraint), so clamp here.
+            fit_score = max(0, min(100, int(data["fit_score"])))
             return LLMScore(
-                fit_score=int(data["fit_score"]),
+                fit_score=fit_score,
                 seniority_assessment=data["seniority_assessment"],
                 role_authenticity=data["role_authenticity"],
                 reasoning=data["reasoning"],

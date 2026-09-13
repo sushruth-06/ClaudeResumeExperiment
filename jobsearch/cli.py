@@ -126,20 +126,32 @@ def score_cmd(limit: int | None):
         pending = db.jobs_pending_score(conn)
         if limit:
             pending = pending[:limit]
-        click.echo(f"{len(pending)} jobs pending score.")
+    click.echo(f"{len(pending)} jobs pending score.")
 
-        client = None
-        passed_count = 0
-        for row in pending:
-            job = _row_to_raw_job(row)
-            result = filters.evaluate(job, criteria)
-            if not result.passed:
+    # Each job gets its own short-lived connection/transaction so a single
+    # failure (bad network blip, one malformed LLM response) can't roll back
+    # every already-completed - and already-paid-for - LLM call in the run.
+    client = None
+    passed_count = 0
+    error_count = 0
+    for row in pending:
+        job = _row_to_raw_job(row)
+        result = filters.evaluate(job, criteria)
+        if not result.passed:
+            with db.get_conn() as conn:
                 db.save_score(conn, job.job_id, passed_deterministic=False, deterministic_reason=result.reason)
-                continue
+            continue
 
-            if client is None:
-                client = llm_score._client()
+        if client is None:
+            client = llm_score._client()
+        try:
             llm_result = llm_score.score_job(job, resume.model_dump(), client=client)
+        except Exception as e:
+            error_count += 1
+            click.echo(f"  ERROR scoring {job.company} — {job.title}: {e}")
+            continue
+
+        with db.get_conn() as conn:
             db.save_score(
                 conn,
                 job.job_id,
@@ -149,10 +161,13 @@ def score_cmd(limit: int | None):
                 llm_reasoning=llm_result.reasoning,
                 llm_seniority_assessment=llm_result.seniority_assessment,
             )
-            passed_count += 1
-            click.echo(f"  [{llm_result.fit_score:3d}] {job.company} — {job.title}")
+        passed_count += 1
+        click.echo(f"  [{llm_result.fit_score:3d}] {job.company} — {job.title}")
 
-    click.echo(f"Scored {len(pending)} jobs, {passed_count} passed deterministic filters.")
+    click.echo(
+        f"Scored {len(pending)} jobs, {passed_count} passed deterministic filters, "
+        f"{error_count} errored (left pending, will retry next run)."
+    )
 
 
 def _row_to_raw_job(row):

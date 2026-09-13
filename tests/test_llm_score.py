@@ -74,6 +74,25 @@ def test_score_job_forces_tool_choice():
     assert "Backend Software Engineer" in kwargs["messages"][0]["content"]
 
 
+def test_score_job_clamps_out_of_range_fit_score():
+    fake = FakeClient(
+        {
+            "fit_score": 137,  # strict schemas can't enforce min/max on integers
+            "seniority_assessment": "x",
+            "role_authenticity": "x",
+            "reasoning": "x",
+        }
+    )
+    result = llm_score.score_job(make_job(), {}, client=fake)
+    assert result.fit_score == 100
+
+    fake_negative = FakeClient(
+        {"fit_score": -12, "seniority_assessment": "x", "role_authenticity": "x", "reasoning": "x"}
+    )
+    result_negative = llm_score.score_job(make_job(), {}, client=fake_negative)
+    assert result_negative.fit_score == 0
+
+
 def test_score_job_raises_if_no_tool_call_returned():
     class EmptyClient:
         class messages:

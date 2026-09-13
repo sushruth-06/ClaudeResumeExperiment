@@ -17,8 +17,10 @@ MODEL = "claude-sonnet-5"
 TAILOR_TOOL = {
     "name": "record_tailored_resume",
     "description": "Record the tailored resume content for this job application.",
+    "strict": True,
     "input_schema": {
         "type": "object",
+        "additionalProperties": False,
         "properties": {
             "summary": {
                 "type": "string",
@@ -37,6 +39,7 @@ TAILOR_TOOL = {
                 "resume), the tailored bullet points to use.",
                 "items": {
                     "type": "object",
+                    "additionalProperties": False,
                     "properties": {
                         "company": {"type": "string"},
                         "title": {"type": "string"},
