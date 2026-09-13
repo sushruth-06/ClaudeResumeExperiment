@@ -5,8 +5,13 @@ venv/
 *.egg-info/
 .env
 data/jobsearch.db
+data/jobsearch.db-journal
+data/resume/*.json
 data/output/resumes/*.pdf
 data/output/digests/*.html
+data/logs/
 .playwright-linkedin-state.json
+data/.linkedin-profile/
 .DS_Store
 *.log
+.pytest_cache/
