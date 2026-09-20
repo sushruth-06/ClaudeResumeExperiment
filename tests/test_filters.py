@@ -108,30 +108,17 @@ def test_default_criteria_is_permissive():
     assert result.passed
 
 
-def test_freshness_passes_recent_posting():
+def test_evaluate_ignores_posting_age():
+    """Freshness is a digest-selection-time concern (db.shortlisted_jobs),
+    not a scoring-time exclusion -- see filters.py module docstring. A job
+    needs an LLM fit score on file regardless of age so the digest has a
+    recency fallback to draw on when nothing qualifies as fresh.
+    """
     from datetime import datetime, timezone
 
-    recent = (datetime.now(timezone.utc)).isoformat()
-    job = make_job(posted_at=recent)
-    result = filters.evaluate(job, make_criteria(max_posting_age_hours=24))
-    assert result.passed
+    recent = datetime.now(timezone.utc).isoformat()
+    criteria = make_criteria(max_posting_age_hours=24)
 
-
-def test_freshness_rejects_stale_posting():
-    job = make_job(posted_at="2020-01-01T00:00:00Z")
-    result = filters.evaluate(job, make_criteria(max_posting_age_hours=24))
-    assert not result.passed
-    assert "exceeds max_posting_age_hours" in result.reason
-
-
-def test_freshness_rejects_missing_posted_at_when_required():
-    job = make_job(posted_at=None)
-    result = filters.evaluate(job, make_criteria(max_posting_age_hours=24))
-    assert not result.passed
-    assert "can't confirm freshness" in result.reason
-
-
-def test_freshness_ignored_when_not_configured():
-    job = make_job(posted_at=None)
-    result = filters.evaluate(job, make_criteria(max_posting_age_hours=None))
-    assert result.passed
+    assert filters.evaluate(make_job(posted_at=recent), criteria).passed
+    assert filters.evaluate(make_job(posted_at="2020-01-01T00:00:00Z"), criteria).passed
+    assert filters.evaluate(make_job(posted_at=None), criteria).passed

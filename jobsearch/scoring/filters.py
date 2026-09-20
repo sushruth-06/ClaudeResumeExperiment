@@ -2,6 +2,13 @@
 
 Purpose is twofold: cut LLM spend by dropping obvious non-matches, and give a
 human-readable reason for every rejection so the digest/debugging story is clear.
+
+Posting freshness (max_posting_age_hours) is deliberately NOT checked here.
+It used to hard-exclude stale jobs before they were ever LLM-scored, which
+meant that on a quiet posting day there were zero scored candidates to fall
+back to. Freshness is now a digest-selection-time preference instead (see
+db.shortlisted_jobs): prefer postings under the age limit, but fall back to
+the most recent scored postings available rather than sending nothing.
 """
 from __future__ import annotations
 
@@ -9,7 +16,6 @@ import re
 from dataclasses import dataclass
 
 from jobsearch.config import Criteria
-from jobsearch.date_utils import hours_since
 from jobsearch.models import RawJob
 
 REMOTE_LOCATION_PATTERN = re.compile(r"\bremote\b", re.IGNORECASE)
@@ -55,19 +61,6 @@ def _keyword_excluded(description: str, keywords: list[str]) -> str | None:
     return None
 
 
-def _is_fresh_enough(job: RawJob, max_age_hours: int | None) -> tuple[bool, str]:
-    if max_age_hours is None:
-        return True, ""
-    age = hours_since(job.posted_at)
-    if age is None:
-        # Can't confirm freshness -> fail closed rather than risk surfacing
-        # a stale repost when the whole point is "only today's new postings".
-        return False, "posted_at missing/unparseable, can't confirm freshness"
-    if age > max_age_hours:
-        return False, f"posted {age:.1f}h ago, exceeds max_posting_age_hours={max_age_hours}"
-    return True, ""
-
-
 def _comp_floor_met(job: RawJob, min_comp_usd: int | None) -> bool:
     if min_comp_usd is None:
         return True
@@ -98,9 +91,5 @@ def evaluate(job: RawJob, criteria: Criteria) -> FilterResult:
 
     if not _comp_floor_met(job, criteria.dealbreakers.min_comp_usd):
         return FilterResult(False, f"comp below floor of {criteria.dealbreakers.min_comp_usd}")
-
-    fresh, fresh_reason = _is_fresh_enough(job, criteria.max_posting_age_hours)
-    if not fresh:
-        return FilterResult(False, fresh_reason)
 
     return FilterResult(True, "passed all deterministic checks")

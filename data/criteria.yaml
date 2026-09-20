@@ -37,9 +37,11 @@ digest_size: 2
 # more analyst-heavy companies are added to companies.yaml.
 min_fit_score: 40
 
-# Only postings first seen/updated within this many hours are considered
-# "today's new jobs" -- combined with digest_size above, this is the
-# "latest jobs, <24h old, top 2" daily-digest behavior.
+# Preferred freshness window: the digest picks its top `digest_size`
+# matches from postings under this age first. On a quiet posting day where
+# fewer than digest_size postings qualify, it falls back to the most
+# recent postings available (regardless of age) to fill the rest, rather
+# than sending an empty or short digest.
 max_posting_age_hours: 24
 
 linkedin:

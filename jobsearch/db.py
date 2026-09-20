@@ -254,12 +254,20 @@ def shortlisted_jobs(
 ) -> list[sqlite3.Row]:
     """Candidates ordered by fit score, filtered to those not yet digested.
 
-    Freshness (posted_at vs. max_posting_age_hours) is re-checked here, not
-    just at scoring time: a row scored days ago as "passed" would otherwise
-    stay eligible forever, since `score` only evaluates newly-pending jobs
-    and never re-visits already-scored ones. SQLite can't parse the mixed
-    ISO8601/epoch-millis posted_at formats, so we over-fetch candidates and
-    filter with the same date_utils logic the scoring-time filter uses.
+    Two-tier when max_posting_age_hours is set:
+      1. Postings within the freshness window, best fit score first.
+      2. If that doesn't fill `limit` (e.g. a quiet posting day), fall back
+         to the most recent remaining postings by posted_at, regardless of
+         age, to fill the rest -- better to send a slightly older strong
+         match than send nothing. A posting with an unparseable posted_at
+         can't be ranked by recency, so it sorts last within the fallback
+         tier rather than being dropped outright.
+
+    Freshness is re-checked here rather than trusted from scoring time:
+    `score` only evaluates newly-pending jobs and never re-visits rows it
+    already scored, so a job scored days ago would otherwise stay eligible
+    forever. SQLite can't parse the mixed ISO8601/epoch-millis posted_at
+    formats, so we fetch all candidates and rank with date_utils in Python.
     """
     candidates = conn.execute(
         """
@@ -277,16 +285,20 @@ def shortlisted_jobs(
         (min_fit_score,),
     ).fetchall()
 
-    if max_posting_age_hours is None:
+    if max_posting_age_hours is None or not candidates:
         return candidates[:limit]
 
     from jobsearch.date_utils import hours_since
 
-    fresh = []
-    for row in candidates:
-        age = hours_since(row["posted_at"])
-        if age is not None and age <= max_posting_age_hours:
-            fresh.append(row)
-        if len(fresh) >= limit:
-            break
-    return fresh
+    ages = [(row, hours_since(row["posted_at"])) for row in candidates]
+
+    fresh = [row for row, age in ages if age is not None and age <= max_posting_age_hours]
+    selected = fresh[:limit]
+
+    if len(selected) < limit:
+        selected_ids = {row["job_id"] for row in selected}
+        remaining = [(row, age) for row, age in ages if row["job_id"] not in selected_ids]
+        remaining.sort(key=lambda pair: pair[1] if pair[1] is not None else float("inf"))
+        selected = selected + [row for row, _ in remaining[: limit - len(selected)]]
+
+    return selected
