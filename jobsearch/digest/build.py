@@ -26,6 +26,7 @@ class DigestEntry:
     llm_fit_score: int
     llm_reasoning: str
     llm_seniority_assessment: str
+    llm_role_authenticity: str
     resume_pdf_path: str | None = None
 
 
@@ -49,6 +50,7 @@ def build_digest_entries(conn: sqlite3.Connection, min_fit_score: int, limit: in
                 llm_fit_score=row["llm_fit_score"],
                 llm_reasoning=row["llm_reasoning"] or "",
                 llm_seniority_assessment=row["llm_seniority_assessment"] or "",
+                llm_role_authenticity=row["llm_role_authenticity"] or "",
                 resume_pdf_path=resume_row["pdf_path"] if resume_row else None,
             )
         )

@@ -56,6 +56,9 @@
     {% if job.llm_seniority_assessment %}
     <div class="reasoning"><span class="reasoning-label">Seniority:</span> {{ job.llm_seniority_assessment }}</div>
     {% endif %}
+    {% if job.llm_role_authenticity %}
+    <div class="reasoning"><span class="reasoning-label">Is this really the role it claims to be?</span> {{ job.llm_role_authenticity }}</div>
+    {% endif %}
     <div class="links">
       <a href="{{ job.url }}">Job posting →</a>
       {% if job.resume_pdf_path %}<a href="file://{{ job.resume_pdf_path }}">Tailored resume →</a>{% endif %}

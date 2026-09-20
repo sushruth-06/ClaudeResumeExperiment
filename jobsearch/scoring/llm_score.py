@@ -15,6 +15,7 @@ from typing import Optional
 import anthropic
 
 from jobsearch.models import RawJob
+from jobsearch.text_utils import strip_stray_tags
 
 logger = logging.getLogger(__name__)
 
@@ -108,9 +109,9 @@ def score_job(job: RawJob, resume_json: dict, client: anthropic.Anthropic | None
             fit_score = max(0, min(100, int(data["fit_score"])))
             return LLMScore(
                 fit_score=fit_score,
-                seniority_assessment=data["seniority_assessment"],
-                role_authenticity=data["role_authenticity"],
-                reasoning=data["reasoning"],
+                seniority_assessment=strip_stray_tags(data["seniority_assessment"]),
+                role_authenticity=strip_stray_tags(data["role_authenticity"]),
+                reasoning=strip_stray_tags(data["reasoning"]),
             )
 
     raise RuntimeError(f"Model did not return a record_fit_assessment tool call: {resp}")

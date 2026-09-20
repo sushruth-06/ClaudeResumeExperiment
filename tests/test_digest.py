@@ -25,6 +25,7 @@ def seed(conn, source, external_id, title, company, fit_score):
         llm_fit_score=fit_score,
         llm_reasoning=f"Great fit for {title}.",
         llm_seniority_assessment="Matches level.",
+        llm_role_authenticity="Genuinely the role it claims to be.",
     )
     return job_id
 
@@ -55,6 +56,7 @@ def test_render_digest_html_real_template_and_write_file(tmp_path):
     assert "Acme" in html
     assert "88/100" in html
     assert "Great fit for Backend Engineer." in html
+    assert "Genuinely the role it claims to be." in html
     assert "https://example.com/greenhouse/1" in html
 
     out = write_html_file(html, tmp_path / "digest.html")

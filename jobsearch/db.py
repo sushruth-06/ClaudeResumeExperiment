@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS scores (
     llm_fit_score INTEGER,
     llm_reasoning TEXT,
     llm_seniority_assessment TEXT,
+    llm_role_authenticity TEXT,
     scored_at TEXT NOT NULL
 );
 
@@ -89,6 +90,18 @@ def get_conn(db_path: Path | None = None) -> Iterator[sqlite3.Connection]:
 def init_db(db_path: Path | None = None) -> None:
     with get_conn(db_path) as conn:
         conn.executescript(SCHEMA)
+        _migrate(conn)
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Idempotent ALTER TABLEs for columns added after a table already existed.
+
+    CREATE TABLE IF NOT EXISTS in SCHEMA only handles brand-new databases;
+    an existing one needs its own column added explicitly.
+    """
+    existing_cols = {row["name"] for row in conn.execute("PRAGMA table_info(scores)")}
+    if "llm_role_authenticity" not in existing_cols:
+        conn.execute("ALTER TABLE scores ADD COLUMN llm_role_authenticity TEXT")
 
 
 def upsert_job(conn: sqlite3.Connection, job: RawJob) -> tuple[str, bool]:
@@ -163,18 +176,21 @@ def save_score(
     llm_fit_score: Optional[int] = None,
     llm_reasoning: Optional[str] = None,
     llm_seniority_assessment: Optional[str] = None,
+    llm_role_authenticity: Optional[str] = None,
 ) -> None:
     conn.execute(
         """
         INSERT INTO scores (job_id, passed_deterministic, deterministic_reason,
-            llm_fit_score, llm_reasoning, llm_seniority_assessment, scored_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+            llm_fit_score, llm_reasoning, llm_seniority_assessment,
+            llm_role_authenticity, scored_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(job_id) DO UPDATE SET
             passed_deterministic=excluded.passed_deterministic,
             deterministic_reason=excluded.deterministic_reason,
             llm_fit_score=excluded.llm_fit_score,
             llm_reasoning=excluded.llm_reasoning,
             llm_seniority_assessment=excluded.llm_seniority_assessment,
+            llm_role_authenticity=excluded.llm_role_authenticity,
             scored_at=excluded.scored_at
         """,
         (
@@ -184,6 +200,7 @@ def save_score(
             llm_fit_score,
             llm_reasoning,
             llm_seniority_assessment,
+            llm_role_authenticity,
             _now(),
         ),
     )
@@ -232,7 +249,8 @@ def jobs_pending_score(conn: sqlite3.Connection) -> list[sqlite3.Row]:
 def shortlisted_jobs(conn: sqlite3.Connection, min_fit_score: int, limit: int) -> list[sqlite3.Row]:
     return conn.execute(
         """
-        SELECT j.*, s.llm_fit_score, s.llm_reasoning, s.llm_seniority_assessment
+        SELECT j.*, s.llm_fit_score, s.llm_reasoning, s.llm_seniority_assessment,
+            s.llm_role_authenticity
         FROM jobs j
         JOIN scores s ON j.job_id = s.job_id
         LEFT JOIN application_status a ON j.job_id = a.job_id

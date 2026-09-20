@@ -11,6 +11,7 @@ import anthropic
 
 from jobsearch.models import RawJob
 from jobsearch.resume.schema import Resume
+from jobsearch.text_utils import strip_stray_tags
 
 MODEL = "claude-sonnet-5"
 
@@ -115,11 +116,12 @@ def tailor_resume(resume: Resume, job: RawJob, client: anthropic.Anthropic | Non
         raise RuntimeError(f"Model did not return a record_tailored_resume tool call: {resp}")
 
     result = copy.deepcopy(resume)
-    result.summary = tailored_data["summary"]
-    result.skills = tailored_data["skills"]
+    result.summary = strip_stray_tags(tailored_data["summary"])
+    result.skills = [strip_stray_tags(s) for s in tailored_data["skills"]]
 
     bullets_by_key = {
-        (b["company"], b["title"]): b["bullets"] for b in tailored_data["experience_bullets"]
+        (b["company"], b["title"]): [strip_stray_tags(bullet) for bullet in b["bullets"]]
+        for b in tailored_data["experience_bullets"]
     }
     for entry in result.experience:
         key = (entry.company, entry.title)

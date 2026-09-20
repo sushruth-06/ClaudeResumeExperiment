@@ -160,6 +160,7 @@ def score_cmd(limit: int | None):
                 llm_fit_score=llm_result.fit_score,
                 llm_reasoning=llm_result.reasoning,
                 llm_seniority_assessment=llm_result.seniority_assessment,
+                llm_role_authenticity=llm_result.role_authenticity,
             )
         passed_count += 1
         click.echo(f"  [{llm_result.fit_score:3d}] {job.company} — {job.title}")
@@ -234,31 +235,56 @@ def digest_cmd():
     with db.get_conn() as conn:
         entries = build_digest_entries(conn, criteria.min_fit_score, criteria.digest_size)
 
-        for entry in entries:
-            if entry.resume_pdf_path:
-                continue
+    # Each job's tailoring gets its own short transaction so a failure on
+    # one job (or later, on delivery) can't roll back already-completed -
+    # and already-paid-for - tailoring work. Same pattern as score_cmd.
+    for entry in entries:
+        if entry.resume_pdf_path:
+            continue
+        with db.get_conn() as conn:
             row = conn.execute("SELECT * FROM jobs WHERE job_id = ?", (entry.job_id,)).fetchone()
             job = _row_to_raw_job(row)
+        try:
             tailored = tailor_resume(resume, job)
             pdf_path = RESUME_OUTPUT_DIR / f"{entry.job_id}_{job.company}.pdf".replace(" ", "_")
             render_pdf(tailored, pdf_path)
+        except Exception as e:
+            click.echo(f"  ERROR tailoring {job.company} — {job.title}: {e}")
+            continue
+        with db.get_conn() as conn:
             db.save_resume(conn, entry.job_id, str(pdf_path), tailored.model_dump())
-            entry.resume_pdf_path = str(pdf_path)
-            click.echo(f"  tailored resume -> {pdf_path}")
+        entry.resume_pdf_path = str(pdf_path)
+        click.echo(f"  tailored resume -> {pdf_path}")
 
-        html = render_digest_html(entries, run_date=run_date)
-        out_path = write_html_file(html, DIGEST_OUTPUT_DIR / f"{run_date}.html")
+    html = render_digest_html(entries, run_date=run_date)
+    out_path = write_html_file(html, DIGEST_OUTPUT_DIR / f"{run_date}.html")
 
-        emailed = send_email(html, subject=f"Job Digest — {run_date} ({len(entries)} matches)")
-        slacked = send_slack(entries, run_date)
+    # Delivery failures must never block marking the digest done - the HTML
+    # file above is already the guaranteed fallback delivery mechanism.
+    email_status = "skipped (not configured)"
+    try:
+        email_status = "sent" if send_email(
+            html, subject=f"Job Digest — {run_date} ({len(entries)} matches)"
+        ) else "skipped (not configured)"
+    except Exception as e:
+        click.echo(f"  ERROR sending email: {e}")
+        email_status = f"FAILED ({e})"
 
+    slack_status = "skipped (not configured)"
+    try:
+        slack_status = "sent" if send_slack(entries, run_date) else "skipped (not configured)"
+    except Exception as e:
+        click.echo(f"  ERROR posting to Slack: {e}")
+        slack_status = f"FAILED ({e})"
+
+    with db.get_conn() as conn:
         db.record_digest_run(conn, run_date, [e.job_id for e in entries])
         for entry in entries:
             db.set_status(conn, entry.job_id, "digested")
 
     click.echo(f"Digest written to {out_path} ({len(entries)} jobs).")
-    click.echo(f"Email: {'sent' if emailed else 'skipped (not configured)'}")
-    click.echo(f"Slack: {'sent' if slacked else 'skipped (not configured)'}")
+    click.echo(f"Email: {email_status}")
+    click.echo(f"Slack: {slack_status}")
 
 
 @main.command("fetch-linkedin")
