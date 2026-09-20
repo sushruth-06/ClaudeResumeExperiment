@@ -4,29 +4,29 @@
 <meta charset="utf-8">
 <title>{{ resume.contact.name }} - Resume</title>
 <style>
-  @page { size: Letter; margin: 0.6in; }
+  @page { size: Letter; margin: {{ '0.45in' if compact else '0.6in' }}; }
   body {
     font-family: "Helvetica Neue", Arial, sans-serif;
     color: #1a1a1a;
-    font-size: 10.5pt;
-    line-height: 1.4;
+    font-size: {{ '9.5pt' if compact else '10.5pt' }};
+    line-height: {{ '1.25' if compact else '1.4' }};
   }
-  h1 { font-size: 18pt; margin: 0 0 2px 0; }
-  .contact-line { font-size: 9.5pt; color: #444; margin-bottom: 14px; }
+  h1 { font-size: {{ '16pt' if compact else '18pt' }}; margin: 0 0 2px 0; }
+  .contact-line { font-size: {{ '8.5pt' if compact else '9.5pt' }}; color: #444; margin-bottom: {{ '8px' if compact else '14px' }}; }
   .contact-line span:not(:last-child)::after { content: " \00b7 "; color: #999; }
   h2 {
-    font-size: 11pt;
+    font-size: {{ '10pt' if compact else '11pt' }};
     text-transform: uppercase;
     letter-spacing: 0.05em;
     border-bottom: 1px solid #ccc;
     padding-bottom: 2px;
-    margin: 16px 0 8px 0;
+    margin: {{ '10px 0 5px 0' if compact else '16px 0 8px 0' }};
   }
   .summary { margin-bottom: 4px; }
   .skills { margin-bottom: 4px; }
-  .entry { margin-bottom: 10px; }
+  .entry { margin-bottom: {{ '6px' if compact else '10px' }}; }
   .entry-header { display: flex; justify-content: space-between; font-weight: bold; }
-  .entry-subheader { display: flex; justify-content: space-between; font-style: italic; color: #333; font-size: 10pt; }
+  .entry-subheader { display: flex; justify-content: space-between; font-style: italic; color: #333; font-size: {{ '9pt' if compact else '10pt' }}; }
   ul { margin: 4px 0 0 0; padding-left: 18px; }
   li { margin-bottom: 2px; }
 </style>

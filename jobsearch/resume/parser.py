@@ -26,8 +26,16 @@ RESUME_TOOL = {
 
 SYSTEM_PROMPT = """You convert raw resume text into structured data with perfect fidelity.
 Do not invent, embellish, or drop any content — preserve every bullet point, date, and
-detail exactly as written (fixing only obvious OCR/extraction artifacts like stray
-whitespace). Use the record_resume tool to respond, and nothing else."""
+detail exactly as written, with two kinds of fixes allowed because they're extraction
+artifacts rather than content changes:
+1. Stray whitespace from PDF/DOCX text extraction.
+2. Capitalization: PDF text extraction sometimes flattens proper nouns to all-lowercase
+   or inconsistent casing (e.g. "community dream foundation" -> "Community Dream
+   Foundation", "colour india paints pvt.ltd" -> "Colour India Paints Pvt. Ltd.",
+   "northeastern university" -> "Northeastern University"). Normalize company names,
+   job titles, school names, and proper nouns to standard title case. Do not change
+   the wording or content itself, only its capitalization and punctuation spacing.
+Use the record_resume tool to respond, and nothing else."""
 
 
 def extract_text(path: Path) -> str:

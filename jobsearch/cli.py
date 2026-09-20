@@ -193,7 +193,7 @@ def _row_to_raw_job(row):
 @click.argument("job_id")
 def tailor_cmd(job_id: str):
     """Generate a tailored resume PDF for one job_id (see `jobsearch stats`/DB for ids)."""
-    from jobsearch.resume.render import render_pdf
+    from jobsearch.resume.render import render_pdf_one_page
     from jobsearch.resume.tailor import tailor_resume
 
     resume = _load_base_resume()
@@ -205,7 +205,7 @@ def tailor_cmd(job_id: str):
 
         tailored = tailor_resume(resume, job)
         pdf_path = RESUME_OUTPUT_DIR / f"{job_id}_{job.company}.pdf".replace(" ", "_")
-        render_pdf(tailored, pdf_path)
+        render_pdf_one_page(tailored, pdf_path)
         db.save_resume(conn, job_id, str(pdf_path), tailored.model_dump())
 
     click.echo(f"Wrote tailored resume -> {pdf_path}")
@@ -222,9 +222,11 @@ def digest_cmd():
     """
     from datetime import date
 
+    from pathlib import Path
+
     from jobsearch.digest.build import build_digest_entries, render_digest_html
     from jobsearch.digest.deliver import send_email, send_slack, write_html_file
-    from jobsearch.resume.render import render_pdf
+    from jobsearch.resume.render import render_pdf_one_page
     from jobsearch.resume.tailor import tailor_resume
     from jobsearch.config import DIGEST_OUTPUT_DIR
 
@@ -247,7 +249,7 @@ def digest_cmd():
         try:
             tailored = tailor_resume(resume, job)
             pdf_path = RESUME_OUTPUT_DIR / f"{entry.job_id}_{job.company}.pdf".replace(" ", "_")
-            render_pdf(tailored, pdf_path)
+            render_pdf_one_page(tailored, pdf_path)
         except Exception as e:
             click.echo(f"  ERROR tailoring {job.company} — {job.title}: {e}")
             continue
@@ -261,10 +263,13 @@ def digest_cmd():
 
     # Delivery failures must never block marking the digest done - the HTML
     # file above is already the guaranteed fallback delivery mechanism.
+    attachments = [Path(e.resume_pdf_path) for e in entries if e.resume_pdf_path]
     email_status = "skipped (not configured)"
     try:
         email_status = "sent" if send_email(
-            html, subject=f"Job Digest — {run_date} ({len(entries)} matches)"
+            html,
+            subject=f"Job Digest — {run_date} ({len(entries)} matches)",
+            attachments=attachments,
         ) else "skipped (not configured)"
     except Exception as e:
         click.echo(f"  ERROR sending email: {e}")

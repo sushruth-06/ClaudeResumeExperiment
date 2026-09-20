@@ -28,10 +28,19 @@ dealbreakers:
 watchlist_companies: []
 
 # How many jobs to include in the final morning digest.
-digest_size: 18
+digest_size: 2
 
-# Minimum LLM fit score (0-100) to make the shortlist.
-min_fit_score: 65
+# Minimum LLM fit score (0-100) to make the shortlist. Real scores seen so
+# far for this resume against these (mostly big-tech/fintech) companies
+# top out around 50-55 -- a 65 floor would leave the digest empty most
+# days. Lowered so the best 2 of the day actually surface; revisit once
+# more analyst-heavy companies are added to companies.yaml.
+min_fit_score: 40
+
+# Only postings first seen/updated within this many hours are considered
+# "today's new jobs" -- combined with digest_size above, this is the
+# "latest jobs, <24h old, top 2" daily-digest behavior.
+max_posting_age_hours: 24
 
 linkedin:
   enabled: false   # flip to true once you've reviewed the ToS risk and logged in once

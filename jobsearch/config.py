@@ -42,6 +42,7 @@ class Criteria(BaseModel):
     watchlist_companies: list[str] = []
     digest_size: int = 18
     min_fit_score: int = 65
+    max_posting_age_hours: Optional[int] = None
     linkedin: LinkedInConfig = LinkedInConfig()
 
 

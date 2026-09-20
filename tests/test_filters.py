@@ -106,3 +106,32 @@ def test_default_criteria_is_permissive():
     job = make_job(title="Literally Anything", location="Nowhere")
     result = filters.evaluate(job, Criteria())
     assert result.passed
+
+
+def test_freshness_passes_recent_posting():
+    from datetime import datetime, timezone
+
+    recent = (datetime.now(timezone.utc)).isoformat()
+    job = make_job(posted_at=recent)
+    result = filters.evaluate(job, make_criteria(max_posting_age_hours=24))
+    assert result.passed
+
+
+def test_freshness_rejects_stale_posting():
+    job = make_job(posted_at="2020-01-01T00:00:00Z")
+    result = filters.evaluate(job, make_criteria(max_posting_age_hours=24))
+    assert not result.passed
+    assert "exceeds max_posting_age_hours" in result.reason
+
+
+def test_freshness_rejects_missing_posted_at_when_required():
+    job = make_job(posted_at=None)
+    result = filters.evaluate(job, make_criteria(max_posting_age_hours=24))
+    assert not result.passed
+    assert "can't confirm freshness" in result.reason
+
+
+def test_freshness_ignored_when_not_configured():
+    job = make_job(posted_at=None)
+    result = filters.evaluate(job, make_criteria(max_posting_age_hours=None))
+    assert result.passed
