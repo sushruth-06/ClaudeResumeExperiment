@@ -22,13 +22,18 @@ def write_html_file(html: str, output_path: Path) -> Path:
 
 
 def send_email(html: str, subject: str) -> bool:
-    """Sends via SMTP if all required env vars are set. Returns False (no-op) otherwise."""
+    """Sends via SMTP if all required env vars are set. Returns False (no-op) otherwise.
+
+    DIGEST_EMAIL_TO may be a single address or a comma-separated list.
+    """
     host = os.environ.get("SMTP_HOST")
-    to_addr = os.environ.get("DIGEST_EMAIL_TO")
+    to_raw = os.environ.get("DIGEST_EMAIL_TO")
     from_addr = os.environ.get("DIGEST_EMAIL_FROM") or os.environ.get("SMTP_USER")
-    if not (host and to_addr and from_addr):
+    if not (host and to_raw and from_addr):
         logger.info("SMTP not configured, skipping email delivery.")
         return False
+
+    to_addrs = [addr.strip() for addr in to_raw.split(",") if addr.strip()]
 
     port = int(os.environ.get("SMTP_PORT", "587"))
     user = os.environ.get("SMTP_USER")
@@ -37,16 +42,18 @@ def send_email(html: str, subject: str) -> bool:
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = from_addr
-    msg["To"] = to_addr
+    msg["To"] = ", ".join(to_addrs)
     msg.attach(MIMEText(html, "html"))
 
     with smtplib.SMTP(host, port, timeout=20) as server:
         server.starttls()
         if user and password:
             server.login(user, password)
-        server.sendmail(from_addr, [to_addr], msg.as_string())
+        # sendmail's recipient list must be individual addresses, not a
+        # single comma-joined string, or the envelope RCPT TO is malformed.
+        server.sendmail(from_addr, to_addrs, msg.as_string())
 
-    logger.info("Sent digest email to %s", to_addr)
+    logger.info("Sent digest email to %s", ", ".join(to_addrs))
     return True
 
 
