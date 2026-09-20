@@ -246,8 +246,22 @@ def jobs_pending_score(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     ).fetchall()
 
 
-def shortlisted_jobs(conn: sqlite3.Connection, min_fit_score: int, limit: int) -> list[sqlite3.Row]:
-    return conn.execute(
+def shortlisted_jobs(
+    conn: sqlite3.Connection,
+    min_fit_score: int,
+    limit: int,
+    max_posting_age_hours: Optional[int] = None,
+) -> list[sqlite3.Row]:
+    """Candidates ordered by fit score, filtered to those not yet digested.
+
+    Freshness (posted_at vs. max_posting_age_hours) is re-checked here, not
+    just at scoring time: a row scored days ago as "passed" would otherwise
+    stay eligible forever, since `score` only evaluates newly-pending jobs
+    and never re-visits already-scored ones. SQLite can't parse the mixed
+    ISO8601/epoch-millis posted_at formats, so we over-fetch candidates and
+    filter with the same date_utils logic the scoring-time filter uses.
+    """
+    candidates = conn.execute(
         """
         SELECT j.*, s.llm_fit_score, s.llm_reasoning, s.llm_seniority_assessment,
             s.llm_role_authenticity
@@ -259,7 +273,20 @@ def shortlisted_jobs(conn: sqlite3.Connection, min_fit_score: int, limit: int) -
           AND j.is_duplicate_of IS NULL
           AND (a.status IS NULL OR a.status NOT IN ('digested', 'applied', 'rejected', 'skipped'))
         ORDER BY s.llm_fit_score DESC
-        LIMIT ?
         """,
-        (min_fit_score, limit),
+        (min_fit_score,),
     ).fetchall()
+
+    if max_posting_age_hours is None:
+        return candidates[:limit]
+
+    from jobsearch.date_utils import hours_since
+
+    fresh = []
+    for row in candidates:
+        age = hours_since(row["posted_at"])
+        if age is not None and age <= max_posting_age_hours:
+            fresh.append(row)
+        if len(fresh) >= limit:
+            break
+    return fresh

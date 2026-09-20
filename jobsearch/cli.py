@@ -235,7 +235,9 @@ def digest_cmd():
     run_date = date.today().isoformat()
 
     with db.get_conn() as conn:
-        entries = build_digest_entries(conn, criteria.min_fit_score, criteria.digest_size)
+        entries = build_digest_entries(
+            conn, criteria.min_fit_score, criteria.digest_size, criteria.max_posting_age_hours
+        )
 
     # Each job's tailoring gets its own short transaction so a failure on
     # one job (or later, on delivery) can't roll back already-completed -

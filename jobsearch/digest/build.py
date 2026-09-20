@@ -30,10 +30,15 @@ class DigestEntry:
     resume_pdf_path: str | None = None
 
 
-def build_digest_entries(conn: sqlite3.Connection, min_fit_score: int, limit: int) -> list[DigestEntry]:
+def build_digest_entries(
+    conn: sqlite3.Connection,
+    min_fit_score: int,
+    limit: int,
+    max_posting_age_hours: int | None = None,
+) -> list[DigestEntry]:
     from jobsearch import db
 
-    rows = db.shortlisted_jobs(conn, min_fit_score, limit)
+    rows = db.shortlisted_jobs(conn, min_fit_score, limit, max_posting_age_hours)
     entries = []
     for row in rows:
         resume_row = conn.execute(
